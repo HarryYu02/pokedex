@@ -17,15 +17,16 @@ func cleanInput(text string) []string {
 	return lowered
 }
 
+type config struct {
+	Client   *pokeapi.PokeApiClient
+	Next     string
+	Previous string
+}
+
 type cliCommand struct {
 	name        string
 	description string
 	callback    func(*config) error
-}
-
-type config struct {
-	Next     string
-	Previous string
 }
 
 func getCommandMap() map[string]cliCommand {
@@ -74,7 +75,7 @@ func commandMap(config *config) error {
 		url = config.Next
 	}
 
-	locationAreas, err := pokeapi.GetLocationAreas(url)
+	locationAreas, err := config.Client.GetLocationAreas(url)
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,7 @@ func commandMapB(config *config) error {
 		url = config.Previous
 	}
 
-	locationAreas, err := pokeapi.GetLocationAreas(url)
+	locationAreas, err := config.Client.GetLocationAreas(url)
 	if err != nil {
 		return err
 	}

@@ -1,16 +1,24 @@
 package main
 
 import (
-	"os"
 	"bufio"
 	"fmt"
+	"os"
+	"time"
+
+	"github.com/harryyu02/pokedex/internal/pokeapi"
 )
 
 func main() {
 	fmt.Println("Welcome to Pokedex cli!")
 	scanner := bufio.NewScanner(os.Stdin)
 	commands := getCommandMap()
-	config := config{}
+	client := pokeapi.NewClient(5 * time.Second)
+	config := config{
+		Client: client,
+		Next: "",
+		Previous: "",
+	}
 
 	for {
 		fmt.Print("Pokedex > ")
