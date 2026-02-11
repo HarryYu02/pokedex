@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"net/http"
+	"io"
+	"encoding/json"
 )
+
 
 func cleanInput(text string) []string {
 	splitted := strings.Fields(text)
@@ -18,7 +22,12 @@ func cleanInput(text string) []string {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(*config) error
+}
+
+type config struct {
+	Next     string
+	Previous string
 }
 
 func getCommandMap() map[string]cliCommand {
@@ -33,16 +42,26 @@ func getCommandMap() map[string]cliCommand {
 			description: "Displays a help message",
 			callback:    commandHelp,
 		},
+		"map": {
+			name:        "map",
+			description: "Displays the names of the next 20 location areas",
+			callback:    commandMap,
+		},
+		"mapb": {
+			name:        "mapb",
+			description: "Displays the names of the previous 20 location areas",
+			callback:    commandMapB,
+		},
 	}
 }
 
-func commandExit() error {
+func commandExit(config *config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp() error {
+func commandHelp(config *config) error {
 	fmt.Print("Welcome to the Pokedex!\nUsage:\n\n")
 	commands := getCommandMap()
 	for _, command := range commands {
@@ -51,3 +70,67 @@ func commandHelp() error {
 	return nil
 }
 
+type LocationAreaRes struct {
+	Count    int    `json:"count"`
+	Next     string `json:"next"`
+	Previous string    `json:"previous"`
+	Results  []struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"results"`
+}
+
+func getLocationAreas(config *config, goPrev bool) (LocationAreaRes, error) {
+	url := "https://pokeapi.co/api/v2/location-area/"
+	if !goPrev && len(config.Next) > 0 {
+		url = config.Next
+	} else if goPrev && len(config.Previous) > 0 {
+		url = config.Previous
+	}
+
+	res, err := http.Get(url)
+	if err != nil {
+		return LocationAreaRes{}, err
+	}
+
+	body, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return LocationAreaRes{}, err
+	}
+
+	var locationAreas LocationAreaRes
+	err = json.Unmarshal(body, &locationAreas)
+	if err != nil {
+		return LocationAreaRes{}, err
+	}
+
+	config.Next = locationAreas.Next
+	config.Previous = locationAreas.Previous
+
+	return locationAreas, nil
+}
+
+func commandMap(config *config) error {
+	locationAreas, err := getLocationAreas(config, false)
+	if err != nil {
+		return err
+	}
+
+	for _, area := range locationAreas.Results {
+		fmt.Printf("%s\n", area.Name)
+	}
+	return nil
+}
+
+func commandMapB(config *config) error {
+	locationAreas, err := getLocationAreas(config, true)
+	if err != nil {
+		return err
+	}
+
+	for _, area := range locationAreas.Results {
+		fmt.Printf("%s\n", area.Name)
+	}
+	return nil
+}

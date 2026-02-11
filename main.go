@@ -10,6 +10,8 @@ func main() {
 	fmt.Println("Welcome to Pokedex cli!")
 	scanner := bufio.NewScanner(os.Stdin)
 	commands := getCommandMap()
+	config := config{}
+
 	for {
 		fmt.Print("Pokedex > ")
 		ok := scanner.Scan()
@@ -17,15 +19,15 @@ func main() {
 			continue
 		}
 		input := scanner.Text()
-		if len(input) == 0 {
+		cleaned := cleanInput(input)
+		if len(cleaned) == 0 {
 			continue
 		}
-		cleaned := cleanInput(input)
 		command, ok := commands[cleaned[0]]
 		if !ok {
 			fmt.Println("Unkown command")
 		} else {
-			err := command.callback()
+			err := command.callback(&config)
 			if err != nil {
 				fmt.Printf("err: %v\n", err)
 			}
