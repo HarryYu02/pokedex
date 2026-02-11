@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"net/http"
-	"io"
-	"encoding/json"
+	"github.com/harryyu02/pokedex/internal/pokeapi"
 )
 
 
@@ -70,61 +68,34 @@ func commandHelp(config *config) error {
 	return nil
 }
 
-type LocationAreaRes struct {
-	Count    int    `json:"count"`
-	Next     string `json:"next"`
-	Previous string    `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"results"`
-}
-
-func getLocationAreas(config *config, goPrev bool) (LocationAreaRes, error) {
+func commandMap(config *config) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
-	if !goPrev && len(config.Next) > 0 {
+	if len(config.Next) > 0 {
 		url = config.Next
-	} else if goPrev && len(config.Previous) > 0 {
-		url = config.Previous
 	}
 
-	res, err := http.Get(url)
+	locationAreas, err := pokeapi.GetLocationAreas(url)
 	if err != nil {
-		return LocationAreaRes{}, err
+		return err
 	}
 
-	body, err := io.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return LocationAreaRes{}, err
-	}
-
-	var locationAreas LocationAreaRes
-	err = json.Unmarshal(body, &locationAreas)
-	if err != nil {
-		return LocationAreaRes{}, err
+	for _, area := range locationAreas.Results {
+		fmt.Printf("%s\n", area.Name)
 	}
 
 	config.Next = locationAreas.Next
 	config.Previous = locationAreas.Previous
 
-	return locationAreas, nil
-}
-
-func commandMap(config *config) error {
-	locationAreas, err := getLocationAreas(config, false)
-	if err != nil {
-		return err
-	}
-
-	for _, area := range locationAreas.Results {
-		fmt.Printf("%s\n", area.Name)
-	}
 	return nil
 }
 
 func commandMapB(config *config) error {
-	locationAreas, err := getLocationAreas(config, true)
+	url := "https://pokeapi.co/api/v2/location-area/"
+	if len(config.Previous) > 0 {
+		url = config.Previous
+	}
+
+	locationAreas, err := pokeapi.GetLocationAreas(url)
 	if err != nil {
 		return err
 	}
@@ -132,5 +103,9 @@ func commandMapB(config *config) error {
 	for _, area := range locationAreas.Results {
 		fmt.Printf("%s\n", area.Name)
 	}
+
+	config.Next = locationAreas.Next
+	config.Previous = locationAreas.Previous
+
 	return nil
 }
