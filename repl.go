@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+
 	"github.com/harryyu02/pokedex/internal/pokeapi"
 )
 
@@ -19,6 +21,7 @@ func cleanInput(text string) []string {
 
 type config struct {
 	Client   *pokeapi.PokeApiClient
+	Pokedex  map[string]pokeapi.PokemonRes
 	Next     string
 	Previous string
 }
@@ -55,6 +58,11 @@ func getCommandMap() map[string]cliCommand {
 			name:        "explore",
 			description: "Displays a list of all the Pokémon in the area",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Attempt to catch a pokemon and add to pokedex",
+			callback:    commandCatch,
 		},
 	}
 }
@@ -130,6 +138,32 @@ func commandExplore(config *config, args []string) error {
 
 	for _, pokemon := range pokemonInArea.PokemonEncounters {
 		fmt.Printf("%s\n", pokemon.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandCatch(config *config, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("not enough arguments, pokemon name needed")
+	}
+	pokemon := args[0]
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + pokemon
+
+	pokemonInfo, err := config.Client.GetPokemon(url)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemon)
+	attempt := rand.Intn(500)
+	isSuccess := attempt > pokemonInfo.BaseExperience
+	if isSuccess {
+		fmt.Printf("Caught %s successfully! Add %s to pokedex...\n", pokemonInfo.Name, pokemonInfo.Name)
+		config.Pokedex[pokemonInfo.Name] = pokemonInfo
+	} else {
+		fmt.Printf("Failed to catch %s...\n", pokemonInfo.Name)
 	}
 
 	return nil
