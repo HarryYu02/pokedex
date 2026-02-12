@@ -21,7 +21,7 @@ func cleanInput(text string) []string {
 
 type config struct {
 	Client   *pokeapi.PokeApiClient
-	Pokedex  map[string]pokeapi.PokemonRes
+	Pokedex  map[string]pokeapi.Pokemon
 	Next     string
 	Previous string
 }
@@ -63,6 +63,11 @@ func getCommandMap() map[string]cliCommand {
 			name:        "catch",
 			description: "Attempt to catch a pokemon and add to pokedex",
 			callback:    commandCatch,
+		},
+		"inspect": {
+			name:        "inspect",
+			description: "Displays the info of a pokemon in the pokedex",
+			callback:    commandInspect,
 		},
 	}
 }
@@ -161,9 +166,57 @@ func commandCatch(config *config, args []string) error {
 	isSuccess := attempt > pokemonInfo.BaseExperience
 	if isSuccess {
 		fmt.Printf("Caught %s successfully! Add %s to pokedex...\n", pokemonInfo.Name, pokemonInfo.Name)
-		config.Pokedex[pokemonInfo.Name] = pokemonInfo
+		newEntry := pokeapi.Pokemon{
+			Name: pokemonInfo.Name,
+			Height: pokemonInfo.Height,
+			Weight: pokemonInfo.Weight,
+			Stats: make([]struct {
+				Name  string
+				Value int
+			}, len(pokemonInfo.Stats0)),
+			Types: make([]string, len(pokemonInfo.Types)),
+		}
+		for i, t := range pokemonInfo.Types {
+			newEntry.Types[i] = t.Type.Name
+		}
+		for i, s := range pokemonInfo.Stats0 {
+			newEntry.Stats[i] = struct {
+				Name  string
+				Value int
+			} {
+				Name: s.Stats0Stat.Name,
+				Value: s.BaseStat,
+			}
+		}
+		config.Pokedex[pokemonInfo.Name] = newEntry
 	} else {
 		fmt.Printf("Failed to catch %s...\n", pokemonInfo.Name)
+	}
+
+	return nil
+}
+
+func commandInspect(config *config, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("not enough arguments, pokemon name needed")
+	}
+	pokemon := args[0]
+
+	pokemonInfo, ok := config.Pokedex[pokemon]
+	if !ok {
+		return fmt.Errorf("%s is not in your pokedex, try to catch it first", pokemon)
+	}
+
+	fmt.Printf("Name: %s\n", pokemonInfo.Name)
+	fmt.Printf("Height: %d\n", pokemonInfo.Height)
+	fmt.Printf("Weight: %d\n", pokemonInfo.Weight)
+	fmt.Println("Stats:")
+	for _, s := range pokemonInfo.Stats {
+		fmt.Printf("  -%s: %d\n", s.Name, s.Value)
+	}
+	fmt.Println("Types:")
+	for _, t := range pokemonInfo.Types {
+		fmt.Printf("  - %s\n", t)
 	}
 
 	return nil

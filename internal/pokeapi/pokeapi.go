@@ -77,6 +77,17 @@ type PokemonInAreaRes struct {
 	} `json:"pokemon_encounters"`
 }
 
+type Pokemon struct {
+	Name   string
+	Height int
+	Weight int
+	Stats  []struct {
+		Name  string
+		Value int
+	}
+	Types  []string
+}
+
 type PokemonRes struct {
 	Abilities []Abilities `json:"abilities"`
 	BaseExperience int `json:"base_experience"`
