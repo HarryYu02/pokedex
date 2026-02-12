@@ -32,10 +32,11 @@ func main() {
 			continue
 		}
 		command, ok := commands[cleaned[0]]
+		args := cleaned[1:]
 		if !ok {
 			fmt.Println("Unkown command")
 		} else {
-			err := command.callback(&config)
+			err := command.callback(&config, args)
 			if err != nil {
 				fmt.Printf("err: %v\n", err)
 			}

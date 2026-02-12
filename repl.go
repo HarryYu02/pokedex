@@ -26,7 +26,7 @@ type config struct {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, []string) error
 }
 
 func getCommandMap() map[string]cliCommand {
@@ -51,16 +51,21 @@ func getCommandMap() map[string]cliCommand {
 			description: "Displays the names of the previous 20 location areas",
 			callback:    commandMapB,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Displays a list of all the Pokémon in the area",
+			callback:    commandExplore,
+		},
 	}
 }
 
-func commandExit(config *config) error {
+func commandExit(config *config, args []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(config *config) error {
+func commandHelp(config *config, args []string) error {
 	fmt.Print("Welcome to the Pokedex!\nUsage:\n\n")
 	commands := getCommandMap()
 	for _, command := range commands {
@@ -69,7 +74,7 @@ func commandHelp(config *config) error {
 	return nil
 }
 
-func commandMap(config *config) error {
+func commandMap(config *config, args []string) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
 	if len(config.Next) > 0 {
 		url = config.Next
@@ -90,7 +95,7 @@ func commandMap(config *config) error {
 	return nil
 }
 
-func commandMapB(config *config) error {
+func commandMapB(config *config, args []string) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
 	if len(config.Previous) > 0 {
 		url = config.Previous
@@ -107,6 +112,25 @@ func commandMapB(config *config) error {
 
 	config.Next = locationAreas.Next
 	config.Previous = locationAreas.Previous
+
+	return nil
+}
+
+func commandExplore(config *config, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("not enough arguments, location needed")
+	}
+
+	url := "https://pokeapi.co/api/v2/location-area/" + args[0]
+
+	pokemonInArea, err := config.Client.GetPokemonInArea(url)
+	if err != nil {
+		return err
+	}
+
+	for _, pokemon := range pokemonInArea.PokemonEncounters {
+		fmt.Printf("%s\n", pokemon.Pokemon.Name)
+	}
 
 	return nil
 }
